@@ -434,14 +434,28 @@ html, body {
 .mm-wrap {
   margin:16px; border-radius:16px;
   background:var(--s1); border:1px solid var(--border);
-  padding:16px; overflow:hidden;
+  overflow:hidden; position:relative;
+  height:420px;
 }
-.mm-head {
-  font-family:'Syne',sans-serif; font-weight:700;
-  font-size:.88rem; margin-bottom:14px;
-  display:flex; align-items:center; gap:7px;
+.mm-canvas-wrap {
+  width:100%; height:100%;
+  overflow:hidden; position:relative;
+  cursor:grab;
 }
-.mm-svg { width:100%; touch-action:pinch-zoom; }
+.mm-canvas-wrap:active { cursor:grabbing; }
+#mmCanvas { display:block; width:100%; height:100%; touch-action:none; }
+.mm-controls {
+  position:absolute; bottom:10px; right:10px;
+  display:flex; gap:6px;
+}
+.mm-ctrl-btn {
+  width:32px; height:32px; border-radius:8px;
+  background:rgba(30,30,45,.9); border:1px solid var(--border);
+  color:var(--text); font-size:16px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(8px);
+}
+.mm-ctrl-btn:active { background:rgba(124,92,252,.3); }
 .mm-actions { display:flex; gap:8px; justify-content:center; padding:0 16px 16px; flex-wrap:wrap; }
 
 /* ── PANEL: TRANSCRIPT ── */
@@ -771,56 +785,17 @@ html, body {
         <div class="panel-badges"><span class="badge badge-p">Reunião de Produto Q1</span></div>
       </div>
       <div class="mm-wrap">
-        <svg class="mm-svg" viewBox="0 0 360 380">
-          <!-- Center -->
-          <ellipse cx="180" cy="190" rx="64" ry="28" fill="rgba(124,92,252,.25)" stroke="#7c5cfc" stroke-width="1.8"/>
-          <text x="180" y="186" text-anchor="middle" fill="#e8e8f0" font-family="Syne" font-size="11" font-weight="700">Produto Q1</text>
-          <text x="180" y="200" text-anchor="middle" fill="#7c5cfc" font-family="DM Sans" font-size="9">Reunião</text>
-
-          <!-- Top-left: Roadmap -->
-          <line x1="120" y1="172" x2="58" y2="110" stroke="#7c5cfc" stroke-width="1.4" stroke-dasharray="4,3" opacity=".6"/>
-          <ellipse cx="32" cy="98" rx="40" ry="19" fill="rgba(124,92,252,.15)" stroke="#7c5cfc" stroke-width="1.4"/>
-          <text x="32" y="102" text-anchor="middle" fill="#e8e8f0" font-family="Syne" font-size="9.5" font-weight="600">Roadmap</text>
-          <!-- Leaves -->
-          <line x1="0" y1="87" x2="-18" y2="66" stroke="#7c5cfc" stroke-width="1" opacity=".4"/>
-          <rect x="-48" y="54" width="60" height="18" rx="5" fill="rgba(124,92,252,.12)" stroke="#7c5cfc" stroke-width="1"/>
-          <text x="-18" y="66" text-anchor="middle" fill="#a0a0c0" font-family="DM Sans" font-size="8">Beta 15/03</text>
-
-          <!-- Top-right: Onboarding -->
-          <line x1="230" y1="168" x2="288" y2="106" stroke="#fc5c7d" stroke-width="1.4" stroke-dasharray="4,3" opacity=".6"/>
-          <ellipse cx="318" cy="94" rx="44" ry="19" fill="rgba(252,92,125,.15)" stroke="#fc5c7d" stroke-width="1.4"/>
-          <text x="318" y="98" text-anchor="middle" fill="#e8e8f0" font-family="Syne" font-size="9.5" font-weight="600">Onboarding</text>
-          <line x1="356" y1="83" x2="374" y2="60" stroke="#fc5c7d" stroke-width="1" opacity=".4"/>
-          <rect x="356" y="50" width="60" height="18" rx="5" fill="rgba(252,92,125,.1)" stroke="#fc5c7d" stroke-width="1"/>
-          <text x="386" y="62" text-anchor="middle" fill="#a0a0c0" font-family="DM Sans" font-size="8">Redesign UX</text>
-
-          <!-- Bottom-left: Métricas -->
-          <line x1="130" y1="210" x2="66" y2="280" stroke="#22d3a0" stroke-width="1.4" stroke-dasharray="4,3" opacity=".6"/>
-          <ellipse cx="42" cy="296" rx="42" ry="19" fill="rgba(34,211,160,.15)" stroke="#22d3a0" stroke-width="1.4"/>
-          <text x="42" y="300" text-anchor="middle" fill="#e8e8f0" font-family="Syne" font-size="9.5" font-weight="600">Métricas</text>
-          <line x1="4" y1="308" x2="-14" y2="330" stroke="#22d3a0" stroke-width="1" opacity=".4"/>
-          <rect x="-44" y="320" width="60" height="18" rx="5" fill="rgba(34,211,160,.1)" stroke="#22d3a0" stroke-width="1"/>
-          <text x="-14" y="332" text-anchor="middle" fill="#a0a0c0" font-family="DM Sans" font-size="8">NPS meta 65</text>
-
-          <!-- Bottom-right: Ações -->
-          <line x1="230" y1="210" x2="290" y2="278" stroke="#f5c518" stroke-width="1.4" stroke-dasharray="4,3" opacity=".6"/>
-          <ellipse cx="318" cy="294" rx="46" ry="19" fill="rgba(245,197,24,.15)" stroke="#f5c518" stroke-width="1.4"/>
-          <text x="318" y="298" text-anchor="middle" fill="#e8e8f0" font-family="Syne" font-size="9.5" font-weight="600">Ações</text>
-          <line x1="356" y1="306" x2="370" y2="330" stroke="#f5c518" stroke-width="1" opacity=".4"/>
-          <rect x="346" y="320" width="66" height="18" rx="5" fill="rgba(245,197,24,.1)" stroke="#f5c518" stroke-width="1"/>
-          <text x="379" y="332" text-anchor="middle" fill="#a0a0c0" font-family="DM Sans" font-size="8">Code Freeze 10/03</text>
-
-          <!-- Top-center: Integrações -->
-          <line x1="180" y1="162" x2="180" y2="54" stroke="#5cface" stroke-width="1.4" stroke-dasharray="4,3" opacity=".6"/>
-          <ellipse cx="180" cy="36" rx="52" ry="19" fill="rgba(92,250,206,.15)" stroke="#5cface" stroke-width="1.4"/>
-          <text x="180" y="40" text-anchor="middle" fill="#e8e8f0" font-family="Syne" font-size="9.5" font-weight="600">Integrações</text>
-          <line x1="136" y1="26" x2="110" y2="6" stroke="#5cface" stroke-width="1" opacity=".4"/>
-          <rect x="82" y="-6" width="56" height="18" rx="5" fill="rgba(92,250,206,.1)" stroke="#5cface" stroke-width="1"/>
-          <text x="110" y="6" text-anchor="middle" fill="#a0a0c0" font-family="DM Sans" font-size="8">Slack + Notion</text>
-        </svg>
+        <div class="mm-canvas-wrap" id="mmWrap">
+          <canvas id="mmCanvas"></canvas>
+        </div>
+        <div class="mm-controls">
+          <button class="mm-ctrl-btn" onclick="mmZoom(1.2)">＋</button>
+          <button class="mm-ctrl-btn" onclick="mmZoom(0.8)">－</button>
+          <button class="mm-ctrl-btn" onclick="mmReset()">⊙</button>
+        </div>
       </div>
       <div class="mm-actions">
-        <div class="chip on">🖼️ Exportar PNG</div>
+        <div class="chip on" onclick="mmExport()">🖼️ Exportar PNG</div>
         <div class="chip">📋 Copiar</div>
         <div class="chip">🔗 Compartilhar</div>
       </div>
@@ -947,6 +922,235 @@ html, body {
 </div><!-- /app -->
 
 <script>
+// ── MINDMAP (Canvas, horizontal, IAnotes style) ──
+const MM_DATA = {
+  id:'root', label:'Produto Q1', sub:'Reunião', color:'#7c5cfc',
+  children:[
+    { id:'c1', label:'Problema identificado', color:'#fc5c7d', dot:true, children:[
+      { id:'c1a', label:'Valor negativo de desconto (-3)', color:'#fc5c7d' },
+      { id:'c1b', label:'Último item do cupom afetado', color:'#fc5c7d' },
+      { id:'c1c', label:'Diferença entre valor total e NF', color:'#fc5c7d' },
+    ]},
+    { id:'c2', label:'Pesquisa e diagnóstico', color:'#f5c518', dot:true, children:[
+      { id:'c2a', label:'Logs analisados (últimas 48h)', color:'#f5c518' },
+      { id:'c2b', label:'Reproduzido em staging', color:'#f5c518' },
+    ]},
+    { id:'c3', label:'Ações e procedimentos', color:'#5cface', dot:true, children:[
+      { id:'c3a', label:'Corrigir cálculo no XML', color:'#5cface' },
+      { id:'c3b', label:'Validar com time fiscal', color:'#5cface' },
+      { id:'c3c', label:'Deploy em produção até 10/03', color:'#5cface' },
+    ]},
+    { id:'c4', label:'Detalhes técnicos e dicas', color:'#22d3a0', dot:true, children:[
+      { id:'c4a', label:'Campo <vDesc> precisa ser positivo', color:'#22d3a0' },
+      { id:'c4b', label:'Validar schema SEFAZ', color:'#22d3a0' },
+    ]},
+  ]
+};
+
+let mmScale = 1, mmOffX = 0, mmOffY = 0;
+let mmDragging = false, mmLastX = 0, mmLastY = 0;
+let mmCanvas, mmCtx, mmW, mmH;
+
+function initMindmap() {
+  mmCanvas = document.getElementById('mmCanvas');
+  if (!mmCanvas) return;
+  const wrap = document.getElementById('mmWrap');
+  mmW = wrap.clientWidth; mmH = wrap.clientHeight;
+  mmCanvas.width = mmW * devicePixelRatio;
+  mmCanvas.height = mmH * devicePixelRatio;
+  mmCanvas.style.width = mmW + 'px';
+  mmCanvas.style.height = mmH + 'px';
+  mmCtx = mmCanvas.getContext('2d');
+  mmCtx.scale(devicePixelRatio, devicePixelRatio);
+  mmOffX = 60; mmOffY = mmH / 2;
+  drawMM();
+  addMMEvents();
+}
+
+function drawMM() {
+  mmCtx.clearRect(0, 0, mmW, mmH);
+  mmCtx.save();
+  mmCtx.translate(mmOffX, mmOffY);
+  mmCtx.scale(mmScale, mmScale);
+
+  // Draw background grid dots
+  mmCtx.fillStyle = 'rgba(255,255,255,0.04)';
+  for (let x = -400; x < 800; x += 28)
+    for (let y = -400; y < 400; y += 28)
+      { mmCtx.beginPath(); mmCtx.arc(x,y,1,0,Math.PI*2); mmCtx.fill(); }
+
+  // Layout children
+  const children = MM_DATA.children;
+  const totalH = children.length * 80;
+  const startY = -totalH / 2 + 40;
+  const rootX = 0, rootY = 0;
+
+  // Root node
+  drawRoundRect(mmCtx, rootX - 64, rootY - 22, 128, 44, 12, 'rgba(124,92,252,0.2)', '#7c5cfc', 2);
+  mmCtx.fillStyle = '#e8e8f0';
+  mmCtx.font = 'bold 12px Syne, sans-serif';
+  mmCtx.textAlign = 'center';
+  mmCtx.fillText('Produto Q1', rootX, rootY - 4);
+  mmCtx.fillStyle = '#7c5cfc';
+  mmCtx.font = '10px DM Sans, sans-serif';
+  mmCtx.fillText('Reunião', rootX, rootY + 10);
+
+  children.forEach((child, i) => {
+    const cy = startY + i * 80;
+    const cx = 200;
+
+    // Curved connector root → child
+    mmCtx.beginPath();
+    mmCtx.moveTo(rootX + 64, rootY);
+    mmCtx.bezierCurveTo(rootX + 130, rootY, cx - 60, cy, cx - 70, cy);
+    mmCtx.strokeStyle = child.color;
+    mmCtx.lineWidth = 2;
+    mmCtx.globalAlpha = 0.7;
+    mmCtx.stroke();
+    mmCtx.globalAlpha = 1;
+
+    // Dot on child node
+    if (child.dot) {
+      mmCtx.beginPath();
+      mmCtx.arc(cx - 70, cy, 5, 0, Math.PI*2);
+      mmCtx.fillStyle = child.color;
+      mmCtx.fill();
+    }
+
+    // Child label (no box, just text with underline style like ref)
+    mmCtx.fillStyle = '#e8e8f0';
+    mmCtx.font = 'bold 11px Syne, sans-serif';
+    mmCtx.textAlign = 'left';
+    mmCtx.fillText(child.label, cx - 60, cy + 4);
+
+    // Measure text for underline
+    const tw = mmCtx.measureText(child.label).width;
+    mmCtx.strokeStyle = child.color;
+    mmCtx.lineWidth = 1.5;
+    mmCtx.globalAlpha = 0.5;
+    mmCtx.beginPath();
+    mmCtx.moveTo(cx - 60, cy + 8);
+    mmCtx.lineTo(cx - 60 + tw, cy + 8);
+    mmCtx.stroke();
+    mmCtx.globalAlpha = 1;
+
+    // Sub-children
+    if (child.children) {
+      const subCount = child.children.length;
+      const subSpan = subCount * 26;
+      const subStartY = cy - subSpan / 2 + 13;
+
+      child.children.forEach((sub, j) => {
+        const sy = subStartY + j * 26;
+        const sx = cx + tw + 30;
+
+        // Connector child → sub
+        mmCtx.beginPath();
+        mmCtx.moveTo(cx - 60 + tw, cy);
+        mmCtx.bezierCurveTo(cx - 60 + tw + 20, cy, sx - 20, sy, sx - 8, sy);
+        mmCtx.strokeStyle = child.color;
+        mmCtx.lineWidth = 1.2;
+        mmCtx.globalAlpha = 0.45;
+        mmCtx.stroke();
+        mmCtx.globalAlpha = 1;
+
+        // Dot
+        mmCtx.beginPath();
+        mmCtx.arc(sx - 8, sy, 3.5, 0, Math.PI*2);
+        mmCtx.fillStyle = child.color;
+        mmCtx.globalAlpha = 0.8;
+        mmCtx.fill();
+        mmCtx.globalAlpha = 1;
+
+        // Sub label
+        mmCtx.fillStyle = '#a0a0c0';
+        mmCtx.font = '10px DM Sans, sans-serif';
+        mmCtx.textAlign = 'left';
+        // Wrap text if too long
+        const maxW = 160;
+        wrapText(mmCtx, sub.label, sx, sy + 3, maxW, 14);
+      });
+    }
+  });
+
+  mmCtx.restore();
+}
+
+function drawRoundRect(ctx, x, y, w, h, r, fill, stroke, lw) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r, y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x, y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw||1; ctx.stroke(); }
+}
+
+function wrapText(ctx, text, x, y, maxW, lineH) {
+  const words = text.split(' ');
+  let line = '';
+  for (let w of words) {
+    const test = line + w + ' ';
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line.trim(), x, y);
+      line = w + ' '; y += lineH;
+    } else line = test;
+  }
+  ctx.fillText(line.trim(), x, y);
+}
+
+function addMMEvents() {
+  // Mouse drag
+  mmCanvas.addEventListener('mousedown', e => { mmDragging=true; mmLastX=e.clientX; mmLastY=e.clientY; });
+  window.addEventListener('mousemove', e => {
+    if (!mmDragging) return;
+    mmOffX += e.clientX - mmLastX; mmOffY += e.clientY - mmLastY;
+    mmLastX = e.clientX; mmLastY = e.clientY; drawMM();
+  });
+  window.addEventListener('mouseup', () => mmDragging=false);
+
+  // Touch drag + pinch zoom
+  let lastDist = 0;
+  mmCanvas.addEventListener('touchstart', e => {
+    if (e.touches.length===1) { mmDragging=true; mmLastX=e.touches[0].clientX; mmLastY=e.touches[0].clientY; }
+    if (e.touches.length===2) { lastDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); }
+    e.preventDefault();
+  }, {passive:false});
+  mmCanvas.addEventListener('touchmove', e => {
+    if (e.touches.length===1 && mmDragging) {
+      mmOffX += e.touches[0].clientX - mmLastX; mmOffY += e.touches[0].clientY - mmLastY;
+      mmLastX=e.touches[0].clientX; mmLastY=e.touches[0].clientY; drawMM();
+    }
+    if (e.touches.length===2) {
+      const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      mmScale = Math.max(0.4, Math.min(2.5, mmScale * (d/lastDist)));
+      lastDist = d; drawMM();
+    }
+    e.preventDefault();
+  }, {passive:false});
+  mmCanvas.addEventListener('touchend', () => mmDragging=false);
+
+  // Mouse wheel zoom
+  mmCanvas.addEventListener('wheel', e => {
+    mmScale = Math.max(0.4, Math.min(2.5, mmScale * (e.deltaY < 0 ? 1.1 : 0.9)));
+    drawMM(); e.preventDefault();
+  }, {passive:false});
+}
+
+function mmZoom(f) { mmScale = Math.max(0.4, Math.min(2.5, mmScale*f)); drawMM(); }
+function mmReset() { mmScale=1; mmOffX=60; mmOffY=mmH/2; drawMM(); }
+function mmExport() {
+  const link = document.createElement('a');
+  link.download = 'mapa-mental.png';
+  link.href = mmCanvas.toDataURL('image/png');
+  link.click();
+}
+
+// Init mindmap when tab is opened
+const _origGoTab = goTab;
+
 // ── Service Worker ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -1007,6 +1211,7 @@ function goTab(name, el) {
   else { panel.classList.add('active'); }
   el.classList.add('active');
   document.getElementById('main').scrollTop = 0;
+  if (name === 'mindmap') { setTimeout(initMindmap, 50); }
 }
 
 // ── Recording ──
