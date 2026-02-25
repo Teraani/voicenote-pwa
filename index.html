@@ -922,34 +922,64 @@ html, body {
 </div><!-- /app -->
 
 <script>
-// ── MINDMAP (Canvas, horizontal, IAnotes style) ──
+// ── MINDMAP — Interactive, expand/collapse, horizontal ──
 const MM_DATA = {
-  id:'root', label:'Produto Q1', sub:'Reunião', color:'#7c5cfc',
+  id:'root', label:'Produto Q1', sub:'Reunião', color:'#7c5cfc', expanded:true,
   children:[
-    { id:'c1', label:'Problema identificado', color:'#fc5c7d', dot:true, children:[
+    { id:'c1', label:'Problema identificado', color:'#fc5c7d', expanded:true, children:[
       { id:'c1a', label:'Valor negativo de desconto (-3)', color:'#fc5c7d' },
       { id:'c1b', label:'Último item do cupom afetado', color:'#fc5c7d' },
       { id:'c1c', label:'Diferença entre valor total e NF', color:'#fc5c7d' },
     ]},
-    { id:'c2', label:'Pesquisa e diagnóstico', color:'#f5c518', dot:true, children:[
+    { id:'c2', label:'Pesquisa e diagnóstico', color:'#f5c518', expanded:true, children:[
       { id:'c2a', label:'Logs analisados (últimas 48h)', color:'#f5c518' },
       { id:'c2b', label:'Reproduzido em staging', color:'#f5c518' },
     ]},
-    { id:'c3', label:'Ações e procedimentos', color:'#5cface', dot:true, children:[
+    { id:'c3', label:'Ações e procedimentos', color:'#5cface', expanded:true, children:[
       { id:'c3a', label:'Corrigir cálculo no XML', color:'#5cface' },
       { id:'c3b', label:'Validar com time fiscal', color:'#5cface' },
       { id:'c3c', label:'Deploy em produção até 10/03', color:'#5cface' },
     ]},
-    { id:'c4', label:'Detalhes técnicos e dicas', color:'#22d3a0', dot:true, children:[
-      { id:'c4a', label:'Campo <vDesc> precisa ser positivo', color:'#22d3a0' },
+    { id:'c4', label:'Detalhes técnicos e dicas', color:'#22d3a0', expanded:true, children:[
+      { id:'c4a', label:'Campo vDesc precisa ser positivo', color:'#22d3a0' },
       { id:'c4b', label:'Validar schema SEFAZ', color:'#22d3a0' },
     ]},
   ]
 };
 
-let mmScale = 1, mmOffX = 0, mmOffY = 0;
-let mmDragging = false, mmLastX = 0, mmLastY = 0;
+let mmScale=1, mmOffX=0, mmOffY=0;
+let mmDragging=false, mmMoved=false, mmLastX=0, mmLastY=0;
 let mmCanvas, mmCtx, mmW, mmH;
+let mmHitAreas = []; // [{x,y,w,h,node}]
+
+// ── layout engine: compute Y positions respecting expand state ──
+function mmLayout(node, x, y) {
+  // returns total height consumed
+  if (!node.children || node.children.length === 0) return 22;
+  if (!node.expanded) return 22;
+  let total = 0;
+  node.children.forEach(c => {
+    const sub = mmLayout(c, x+220, y + total);
+    c._y = y + total + sub/2 - sub/2; // will be set below
+    total += sub + 18;
+  });
+  total -= 18;
+  // assign actual y
+  let cursor = y;
+  node.children.forEach(c => {
+    const h = mmSubHeight(c);
+    c._y = cursor + h/2;
+    cursor += h + 18;
+  });
+  return total;
+}
+
+function mmSubHeight(node) {
+  if (!node.children || !node.expanded || node.children.length===0) return 22;
+  let t = 0;
+  node.children.forEach(c => { t += mmSubHeight(c) + 18; });
+  return t - 18;
+}
 
 function initMindmap() {
   mmCanvas = document.getElementById('mmCanvas');
@@ -958,193 +988,254 @@ function initMindmap() {
   mmW = wrap.clientWidth; mmH = wrap.clientHeight;
   mmCanvas.width = mmW * devicePixelRatio;
   mmCanvas.height = mmH * devicePixelRatio;
-  mmCanvas.style.width = mmW + 'px';
-  mmCanvas.style.height = mmH + 'px';
+  mmCanvas.style.width = mmW+'px'; mmCanvas.style.height = mmH+'px';
   mmCtx = mmCanvas.getContext('2d');
   mmCtx.scale(devicePixelRatio, devicePixelRatio);
-  mmOffX = 60; mmOffY = mmH / 2;
+  mmOffX = 20; mmOffY = mmH/2;
+  mmDoLayout();
   drawMM();
   addMMEvents();
 }
 
+function mmDoLayout() {
+  const totalH = mmSubHeight(MM_DATA);
+  const startY = -totalH/2;
+  let cursor = startY;
+  MM_DATA._x = 0; MM_DATA._y = 0;
+  if (MM_DATA.children) {
+    MM_DATA.children.forEach(c => {
+      const h = mmSubHeight(c);
+      c._x = 200;
+      c._y = cursor + h/2;
+      cursor += h + 18;
+      if (c.children) layoutChildren(c, c._x, c._y);
+    });
+  }
+}
+
+function layoutChildren(parent, px, py) {
+  if (!parent.children || !parent.expanded) return;
+  const totalH = parent.children.reduce((s,c) => s + mmSubHeight(c) + 18, -18);
+  let cursor = py - totalH/2;
+  parent.children.forEach(c => {
+    const h = mmSubHeight(c);
+    c._x = px + 220;
+    c._y = cursor + h/2;
+    cursor += h + 18;
+    if (c.children) layoutChildren(c, c._x, c._y);
+  });
+}
+
 function drawMM() {
-  mmCtx.clearRect(0, 0, mmW, mmH);
+  if (!mmCtx) return;
+  mmHitAreas = [];
+  mmCtx.clearRect(0,0,mmW,mmH);
   mmCtx.save();
   mmCtx.translate(mmOffX, mmOffY);
   mmCtx.scale(mmScale, mmScale);
 
-  // Draw background grid dots
-  mmCtx.fillStyle = 'rgba(255,255,255,0.04)';
-  for (let x = -400; x < 800; x += 28)
-    for (let y = -400; y < 400; y += 28)
+  // Grid dots
+  mmCtx.fillStyle = 'rgba(255,255,255,0.035)';
+  for (let x=-500;x<900;x+=30)
+    for (let y=-500;y<500;y+=30)
       { mmCtx.beginPath(); mmCtx.arc(x,y,1,0,Math.PI*2); mmCtx.fill(); }
 
-  // Layout children
-  const children = MM_DATA.children;
-  const totalH = children.length * 80;
-  const startY = -totalH / 2 + 40;
-  const rootX = 0, rootY = 0;
-
   // Root node
-  drawRoundRect(mmCtx, rootX - 64, rootY - 22, 128, 44, 12, 'rgba(124,92,252,0.2)', '#7c5cfc', 2);
-  mmCtx.fillStyle = '#e8e8f0';
-  mmCtx.font = 'bold 12px Syne, sans-serif';
-  mmCtx.textAlign = 'center';
-  mmCtx.fillText('Produto Q1', rootX, rootY - 4);
-  mmCtx.fillStyle = '#7c5cfc';
-  mmCtx.font = '10px DM Sans, sans-serif';
-  mmCtx.fillText('Reunião', rootX, rootY + 10);
+  const rx=0, ry=0;
+  drawNode(rx, ry, 'Produto Q1', 'Reunião', '#7c5cfc', true, true);
+  mmHitAreas.push({x:rx-68, y:ry-24, w:136, h:48, node:MM_DATA});
 
-  children.forEach((child, i) => {
-    const cy = startY + i * 80;
-    const cx = 200;
-
-    // Curved connector root → child
-    mmCtx.beginPath();
-    mmCtx.moveTo(rootX + 64, rootY);
-    mmCtx.bezierCurveTo(rootX + 130, rootY, cx - 60, cy, cx - 70, cy);
-    mmCtx.strokeStyle = child.color;
-    mmCtx.lineWidth = 2;
-    mmCtx.globalAlpha = 0.7;
-    mmCtx.stroke();
-    mmCtx.globalAlpha = 1;
-
-    // Dot on child node
-    if (child.dot) {
-      mmCtx.beginPath();
-      mmCtx.arc(cx - 70, cy, 5, 0, Math.PI*2);
-      mmCtx.fillStyle = child.color;
-      mmCtx.fill();
-    }
-
-    // Child label (no box, just text with underline style like ref)
-    mmCtx.fillStyle = '#e8e8f0';
-    mmCtx.font = 'bold 11px Syne, sans-serif';
-    mmCtx.textAlign = 'left';
-    mmCtx.fillText(child.label, cx - 60, cy + 4);
-
-    // Measure text for underline
-    const tw = mmCtx.measureText(child.label).width;
-    mmCtx.strokeStyle = child.color;
-    mmCtx.lineWidth = 1.5;
-    mmCtx.globalAlpha = 0.5;
-    mmCtx.beginPath();
-    mmCtx.moveTo(cx - 60, cy + 8);
-    mmCtx.lineTo(cx - 60 + tw, cy + 8);
-    mmCtx.stroke();
-    mmCtx.globalAlpha = 1;
-
-    // Sub-children
-    if (child.children) {
-      const subCount = child.children.length;
-      const subSpan = subCount * 26;
-      const subStartY = cy - subSpan / 2 + 13;
-
-      child.children.forEach((sub, j) => {
-        const sy = subStartY + j * 26;
-        const sx = cx + tw + 30;
-
-        // Connector child → sub
-        mmCtx.beginPath();
-        mmCtx.moveTo(cx - 60 + tw, cy);
-        mmCtx.bezierCurveTo(cx - 60 + tw + 20, cy, sx - 20, sy, sx - 8, sy);
-        mmCtx.strokeStyle = child.color;
-        mmCtx.lineWidth = 1.2;
-        mmCtx.globalAlpha = 0.45;
-        mmCtx.stroke();
-        mmCtx.globalAlpha = 1;
-
-        // Dot
-        mmCtx.beginPath();
-        mmCtx.arc(sx - 8, sy, 3.5, 0, Math.PI*2);
-        mmCtx.fillStyle = child.color;
-        mmCtx.globalAlpha = 0.8;
-        mmCtx.fill();
-        mmCtx.globalAlpha = 1;
-
-        // Sub label
-        mmCtx.fillStyle = '#a0a0c0';
-        mmCtx.font = '10px DM Sans, sans-serif';
-        mmCtx.textAlign = 'left';
-        // Wrap text if too long
-        const maxW = 160;
-        wrapText(mmCtx, sub.label, sx, sy + 3, maxW, 14);
-      });
-    }
-  });
+  // Draw all children recursively
+  if (MM_DATA.children && MM_DATA.expanded) {
+    MM_DATA.children.forEach(child => {
+      drawBranch(child, rx+68, ry, child._x, child._y, child.color, 2.2, 0.8);
+    });
+  }
 
   mmCtx.restore();
 }
 
-function drawRoundRect(ctx, x, y, w, h, r, fill, stroke, lw) {
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r, y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x, y+r); ctx.arcTo(x,y,x+r,y,r);
-  ctx.closePath();
-  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw||1; ctx.stroke(); }
+function drawBranch(node, fromX, fromY, toX, toY, color, lw, alpha) {
+  // Connector curve
+  mmCtx.beginPath();
+  mmCtx.moveTo(fromX, fromY);
+  const mx = (fromX + toX) / 2;
+  mmCtx.bezierCurveTo(mx, fromY, mx, toY, toX - 8, toY);
+  mmCtx.strokeStyle = color;
+  mmCtx.lineWidth = lw;
+  mmCtx.globalAlpha = alpha;
+  mmCtx.stroke();
+  mmCtx.globalAlpha = 1;
+
+  // Dot
+  mmCtx.beginPath();
+  mmCtx.arc(toX - 8, toY, lw===2.2 ? 5 : 3.5, 0, Math.PI*2);
+  mmCtx.fillStyle = color;
+  mmCtx.globalAlpha = 0.9;
+  mmCtx.fill();
+  mmCtx.globalAlpha = 1;
+
+  // Label
+  mmCtx.font = lw===2.2 ? 'bold 11.5px Syne,sans-serif' : '10px DM Sans,sans-serif';
+  mmCtx.textAlign = 'left';
+  mmCtx.fillStyle = lw===2.2 ? '#e8e8f0' : '#a0a0c0';
+  const labelX = toX;
+  const maxW = 155;
+  mmCtx.fillText(node.label, labelX, toY + 4, maxW);
+  const tw = Math.min(mmCtx.measureText(node.label).width, maxW);
+
+  // Underline for branch nodes
+  if (lw === 2.2) {
+    mmCtx.strokeStyle = color;
+    mmCtx.lineWidth = 1.5;
+    mmCtx.globalAlpha = 0.45;
+    mmCtx.beginPath();
+    mmCtx.moveTo(labelX, toY+9); mmCtx.lineTo(labelX+tw, toY+9);
+    mmCtx.stroke();
+    mmCtx.globalAlpha = 1;
+  }
+
+  // Expand/collapse toggle if has children
+  if (node.children && node.children.length > 0) {
+    const btnX = labelX + tw + 10;
+    const btnY = toY - 7;
+    const btnW = 18, btnH = 14;
+    drawRoundRect(mmCtx, btnX, btnY, btnW, btnH, 4,
+      node.expanded ? 'rgba(255,255,255,0.12)' : color+'44',
+      color, 1);
+    mmCtx.fillStyle = color;
+    mmCtx.font = 'bold 10px sans-serif';
+    mmCtx.textAlign = 'center';
+    mmCtx.fillText(node.expanded ? '−' : '+', btnX + btnW/2, btnY + 10);
+    // hit area for toggle button
+    mmHitAreas.push({x: btnX-2, y: btnY-2, w: btnW+4, h: btnH+4, node, toggle:true});
+    // hit area for label itself
+    mmHitAreas.push({x: labelX-4, y: toY-12, w: tw+8, h: 20, node, toggle:true});
+  }
+
+  // Recurse into children if expanded
+  if (node.children && node.expanded) {
+    node.children.forEach(child => {
+      drawBranch(child, labelX + tw, toY, child._x, child._y, color, 1.4, 0.5);
+    });
+  }
 }
 
-function wrapText(ctx, text, x, y, maxW, lineH) {
-  const words = text.split(' ');
-  let line = '';
-  for (let w of words) {
-    const test = line + w + ' ';
-    if (ctx.measureText(test).width > maxW && line) {
-      ctx.fillText(line.trim(), x, y);
-      line = w + ' '; y += lineH;
-    } else line = test;
+function drawNode(x, y, label, sub, color, isRoot) {
+  drawRoundRect(mmCtx, x-68, y-24, 136, 48, 12, color+'30', color, 2);
+  mmCtx.fillStyle = '#e8e8f0';
+  mmCtx.font = 'bold 12px Syne,sans-serif';
+  mmCtx.textAlign = 'center';
+  mmCtx.fillText(label, x, y-6);
+  mmCtx.fillStyle = color;
+  mmCtx.font = '10px DM Sans,sans-serif';
+  mmCtx.fillText(sub, x, y+10);
+}
+
+function drawRoundRect(ctx, x, y, w, h, r, fill, stroke, lw) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.stroke();}
+}
+
+// Convert canvas pixel → world coords
+function toWorld(px, py) {
+  return { x:(px - mmOffX)/mmScale, y:(py - mmOffY)/mmScale };
+}
+
+function hitTest(px, py) {
+  const w = toWorld(px, py);
+  for (let i=mmHitAreas.length-1; i>=0; i--) {
+    const h = mmHitAreas[i];
+    if (w.x>=h.x && w.x<=h.x+h.w && w.y>=h.y && w.y<=h.y+h.h) return h;
   }
-  ctx.fillText(line.trim(), x, y);
+  return null;
 }
 
 function addMMEvents() {
-  // Mouse drag
-  mmCanvas.addEventListener('mousedown', e => { mmDragging=true; mmLastX=e.clientX; mmLastY=e.clientY; });
+  let lastDist=0, tapTimeout=null;
+
+  // ── Mouse ──
+  mmCanvas.addEventListener('mousedown', e => {
+    mmDragging=true; mmMoved=false;
+    mmLastX=e.offsetX; mmLastY=e.offsetY;
+  });
   window.addEventListener('mousemove', e => {
     if (!mmDragging) return;
-    mmOffX += e.clientX - mmLastX; mmOffY += e.clientY - mmLastY;
-    mmLastX = e.clientX; mmLastY = e.clientY; drawMM();
+    const dx=e.movementX, dy=e.movementY;
+    if (Math.abs(dx)+Math.abs(dy)>2) mmMoved=true;
+    mmOffX+=dx; mmOffY+=dy; drawMM();
   });
-  window.addEventListener('mouseup', () => mmDragging=false);
+  window.addEventListener('mouseup', e => {
+    if (!mmMoved) {
+      const rect = mmCanvas.getBoundingClientRect();
+      const h = hitTest(e.clientX-rect.left, e.clientY-rect.top);
+      if (h && h.toggle) { h.node.expanded=!h.node.expanded; mmDoLayout(); drawMM(); }
+    }
+    mmDragging=false;
+  });
 
-  // Touch drag + pinch zoom
-  let lastDist = 0;
+  // ── Touch ──
   mmCanvas.addEventListener('touchstart', e => {
-    if (e.touches.length===1) { mmDragging=true; mmLastX=e.touches[0].clientX; mmLastY=e.touches[0].clientY; }
-    if (e.touches.length===2) { lastDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); }
-    e.preventDefault();
-  }, {passive:false});
-  mmCanvas.addEventListener('touchmove', e => {
-    if (e.touches.length===1 && mmDragging) {
-      mmOffX += e.touches[0].clientX - mmLastX; mmOffY += e.touches[0].clientY - mmLastY;
-      mmLastX=e.touches[0].clientX; mmLastY=e.touches[0].clientY; drawMM();
+    if (e.touches.length===1) {
+      mmDragging=true; mmMoved=false;
+      mmLastX=e.touches[0].clientX; mmLastY=e.touches[0].clientY;
     }
     if (e.touches.length===2) {
-      const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-      mmScale = Math.max(0.4, Math.min(2.5, mmScale * (d/lastDist)));
-      lastDist = d; drawMM();
+      lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
     }
     e.preventDefault();
-  }, {passive:false});
-  mmCanvas.addEventListener('touchend', () => mmDragging=false);
+  },{passive:false});
 
-  // Mouse wheel zoom
+  mmCanvas.addEventListener('touchmove', e => {
+    if (e.touches.length===1 && mmDragging) {
+      const dx=e.touches[0].clientX-mmLastX, dy=e.touches[0].clientY-mmLastY;
+      if (Math.abs(dx)+Math.abs(dy)>3) mmMoved=true;
+      mmOffX+=dx; mmOffY+=dy;
+      mmLastX=e.touches[0].clientX; mmLastY=e.touches[0].clientY;
+      drawMM();
+    }
+    if (e.touches.length===2) {
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      mmScale=Math.max(0.35,Math.min(2.8, mmScale*(d/lastDist)));
+      lastDist=d; drawMM();
+    }
+    e.preventDefault();
+  },{passive:false});
+
+  mmCanvas.addEventListener('touchend', e => {
+    if (!mmMoved && e.changedTouches.length===1) {
+      const rect = mmCanvas.getBoundingClientRect();
+      const tx=e.changedTouches[0].clientX-rect.left;
+      const ty=e.changedTouches[0].clientY-rect.top;
+      const h = hitTest(tx, ty);
+      if (h && h.toggle) {
+        h.node.expanded=!h.node.expanded;
+        mmDoLayout(); drawMM();
+        if (navigator.vibrate) navigator.vibrate(20);
+      }
+    }
+    mmDragging=false;
+  });
+
+  // ── Wheel zoom ──
   mmCanvas.addEventListener('wheel', e => {
-    mmScale = Math.max(0.4, Math.min(2.5, mmScale * (e.deltaY < 0 ? 1.1 : 0.9)));
+    mmScale=Math.max(0.35,Math.min(2.8, mmScale*(e.deltaY<0?1.1:0.9)));
     drawMM(); e.preventDefault();
-  }, {passive:false});
+  },{passive:false});
 }
 
-function mmZoom(f) { mmScale = Math.max(0.4, Math.min(2.5, mmScale*f)); drawMM(); }
-function mmReset() { mmScale=1; mmOffX=60; mmOffY=mmH/2; drawMM(); }
+function mmZoom(f) { mmScale=Math.max(0.35,Math.min(2.8,mmScale*f)); drawMM(); }
+function mmReset() { mmScale=1; mmOffX=20; mmOffY=mmH/2; mmDoLayout(); drawMM(); }
 function mmExport() {
-  const link = document.createElement('a');
-  link.download = 'mapa-mental.png';
-  link.href = mmCanvas.toDataURL('image/png');
+  const link=document.createElement('a');
+  link.download='mapa-mental.png';
+  link.href=mmCanvas.toDataURL('image/png');
   link.click();
 }
 
